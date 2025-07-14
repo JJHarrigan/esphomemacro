@@ -1,0 +1,55 @@
+# File goes in the esphome directory
+# Sources: https://www.kincony.com/forum/showthread.php?tid=2960
+
+text_sensor:
+  - platform: template
+    name: 'Button ${number}'
+    id: state_button${number}
+    icon: 'mdi:toggle-switch'
+    on_value: # When a state is set
+      then:
+        - if:
+            condition:
+              text_sensor.state:
+                id: state_button${number}
+                state: ''
+            else: # If non-empty
+              - delay: 200ms
+              - text_sensor.template.publish:
+                  id: state_button${number}
+                  state: !lambda 'return "";' # Reset to empty
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: ${pin}
+      mode: INPUT_PULLUP 
+    name: "button${number}"
+    id: button${number}
+    internal: True
+    filters:
+      - invert:
+      - delayed_on: 30ms
+      - delayed_off: 30ms
+    on_multi_click:
+      - timing:
+          - ON for 10ms to 400ms
+          - OFF for at least 100ms
+        then:
+          - text_sensor.template.publish:
+              id: state_button${number}
+              state: !lambda 'return "single";'
+      - timing:
+          - ON for 10ms to 400ms
+          - OFF for 10ms to 99ms
+          - ON for 10ms to 400ms
+          - OFF for at least 99ms
+        then:
+          - text_sensor.template.publish:
+              id: state_button${number}
+              state: !lambda 'return "double";'              
+      - timing:
+          - ON for at least 2s
+        then:
+          - text_sensor.template.publish:
+              id: state_button${number}
+              state: !lambda 'return "hold";'
